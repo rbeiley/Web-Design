@@ -4,6 +4,6 @@ After choosing which country to represent, you now can start conquering other co
 When you click on a country to try and start conquering it, you get sent to a minigame screen. This minigame is a form of doodle-jump where you try to jump up and up the level until you reach the king of that country. There is a default character that sits at the bottom of the minigame and the screen says “click any arrow to begin” once you click an arrow, the minigame begins. Your character bounces up and down and moving the left or right arrow moves your character to one way. As you go up the level, you have to bounce your character on top of the random platforms that start to appear. If you miss a platform and fall off the world, you get sent out back to the world map screen. If you jump all the way up the game, there is a final platform that you must jump onto that has an image of the king of that country. Once you land on the platform, you have now conquered the level and confetti plays.
 Once you conquer the level, you get sent back to the world map screen where a plane animation happens, flying that king from the country you just conquered back to your native country. A text dialogue then pops up that says the king died unexpectedly in some random fashion (ie. the plane crashed or they got into a car accident).
 
-Aesthetics:
+Aesthetics (Check Screenshots in my repository):
 /Users/roenbeiley/Desktop/Topics/Web-Design/Screen Shot 2024-11-03 at 8.26.56 PM.png
 /Users/roenbeiley/Desktop/Screen Shot 2024-11-03 at 8.31.34 PM.png
