@@ -1,0 +1,2 @@
+##game engine
+I think the most difficult thing about this game is the 3d interactive globe menu. the engine that I found best fits this application is three.js. it has short tutorials on how to get started and 
