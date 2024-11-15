@@ -1,4 +1,3 @@
-
 ---
 
 ## 1. **GameController**
@@ -9,10 +8,11 @@
   - `startMinigame(targetCountry)`: Transitions to the minigame for the selected country.
   - `completeConquest()`: Called upon minigame victory to handle post-victory animations and update conquered countries.
   - `endGame()`: Checks for global conquest and ends the game if all countries are conquered.
-
+ 
 ---
 
 ## 2. **Globe**
+
 - **Purpose**: Represents the 3D model of the Earth and manages the rotation and display of countries.
 - **Key Methods**:
   - `rotate(direction)`: Rotates the globe in a specified direction (left or right).
@@ -23,6 +23,7 @@
 ---
 
 ## 3. **Country**
+
 - **Purpose**: Represents an individual country, storing its attributes and conquest status.
 - **Attributes**:
   - `name`: Country name.
@@ -37,6 +38,7 @@
 ---
 
 ## 4. **Minigame**
+
 - **Purpose**: Controls the platforming minigame where the player attempts to reach the king of a country.
 - **Key Methods**:
   - `startMinigame()`: Initializes the minigame environment with platforms and player character.
@@ -48,6 +50,7 @@
 ---
 
 ## 5. **Player**
+
 - **Purpose**: Represents the player’s character in the minigame.
 - **Attributes**:
   - `position`: Current position on the minigame screen.
@@ -62,6 +65,7 @@
 ---
 
 ## 6. **King**
+
 - **Purpose**: Represents the “king” or final target in each minigame level.
 - **Attributes**:
   - `country`: Country associated with the king.
@@ -73,6 +77,7 @@
 ---
 
 ## 7. **UIManager**
+
 - **Purpose**: Manages all user interface components, prompts, and notifications.
 - **Key Methods**:
   - `showCountrySelectionPrompt(country)`: Displays prompt asking if the player wants to select a country.
@@ -83,6 +88,7 @@
 ---
 
 ## 8. **AnimationManager**
+
 - **Purpose**: Handles animations, including confetti, plane animations, and king defeat scenes.
 - **Key Methods**:
   - `playConfetti()`: Plays confetti animation upon victory.
@@ -92,6 +98,7 @@
 ---
 
 ## 9. **SoundManager**
+
 - **Purpose**: Manages all sound effects and background music throughout the game.
 - **Key Methods**:
   - `playBackgroundMusic()`: Loops background music on the world map.
@@ -102,6 +109,7 @@
 ---
 
 ## 10. **GameState**
+
 - **Purpose**: Tracks and manages game state, including conquered countries, available territories, and overall progress.
 - **Key Methods**:
   - `saveProgress()`: Saves the player’s progress, including conquered countries and minigame checkpoints.
@@ -112,6 +120,7 @@
 ---
 
 ## 10. **Figma**
+
 https://www.figma.com/board/zb1ApgVhdYZpavmOBbKkDJ/world-conquer?node-id=0-1&t=XIElfRkrlmhXfgkv-1
 
 ---
