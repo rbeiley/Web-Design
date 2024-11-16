@@ -2,48 +2,78 @@
 const app = new PIXI.Application({
     width: 400,
     height: 600,
-    backgroundColor: 0x1099bb,
+    backgroundColor: 0xFFFFFF,
+    antialias: true,
 });
 document.body.appendChild(app.view);
 
-// 2. Create the Character
-const character = new PIXI.Graphics();
-character.beginFill(0xff0000); // Red color
-character.drawRect(0, 0, 30, 30); // 30x30 square
-character.endFill();
-character.x = app.screen.width / 2 - 15; // Center horizontally
-character.y = app.screen.height - 90; // Start above the floor
+// 2. Create the Character using Sprites with maximum quality settings
+let character;
+const textureSettings = {
+    scaleMode: PIXI.SCALE_MODES.LINEAR,
+    mipmap: PIXI.MIPMAP_MODES.ON,
+    anisotropicLevel: 16,
+    quality: 1
+};
+
+let characterTextures = {
+    right: PIXI.Texture.from('doodle_right.png', textureSettings),
+    left: PIXI.Texture.from('doodle_left.png', textureSettings)
+};
+
+// Load platform texture
+const platformTexture = PIXI.Texture.from('platform.png', textureSettings);
+
+// Initialize character sprite with right-facing texture
+character = new PIXI.Sprite(characterTextures.right);
+character.width = 55;
+character.height = 55;
+
+character.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+character.texture.baseTexture.mipmap = PIXI.MIPMAP_MODES.ON;
+
+character.anchor.set(0.5, 0.5);
+character.x = app.screen.width / 2;
+// Position character exactly on top of the floor
+character.y = app.screen.height - 45; // Adjusted to match floor position (600 - 30 - 27.5)
+character.lastDirection = 'right';
 
 app.stage.addChild(character);
 
 // 3. Variables for Movement and Physics
 let velocityY = 0;
 const gravity = 0.5;
-const jumpStrength = -13.5; // Updated jump strength
+const jumpStrength = -13.5;
+let gameStarted = false;
 
 // 4. Platforms Array
-let platforms = []; // Changed to 'let' to allow resetting
+let platforms = [];
 
 // 5. Create the Floor
 function createFloor() {
     const floor = new PIXI.Graphics();
-    floor.beginFill(0x654321); // Brown color for the floor
-    floor.drawRect(0, 0, app.screen.width, 30); // Floor size
+    floor.beginFill(0x8B4513);  // Brown color for soil
+    floor.drawRect(0, 0, app.screen.width, 30);
     floor.endFill();
+    floor.y = app.screen.height - 30;
+
+    // Add properties needed for collision detection
+    floor.width = app.screen.width;
+    floor.height = 30;
     floor.x = 0;
-    floor.y = app.screen.height - 30; // Positioned at the bottom
+
     app.stage.addChild(floor);
-    platforms.push(floor);
+    platforms.push(floor);  // Include floor in platforms array
+    return floor;  // Return the floor for reference
 }
 
-createFloor(); // Call the function to create the floor
+let floor = createFloor();  // Store floor reference
 
 // 6. Generate Random Platforms
 function createPlatform(x, y) {
-    const platform = new PIXI.Graphics();
-    platform.beginFill(0x00ff00); // Green color
-    platform.drawRect(0, 0, 60, 10); // Platform size
-    platform.endFill();
+    const platform = new PIXI.Sprite(platformTexture);
+    platform.width = 60;
+    platform.height = 15;
     platform.x = x;
     platform.y = y;
     app.stage.addChild(platform);
@@ -53,8 +83,8 @@ function createPlatform(x, y) {
 // Initial Platform Generation
 for (let i = 0; i < 10; i++) {
     createPlatform(
-        Math.random() * (app.screen.width - 60), // Random x position
-        app.screen.height - 100 - i * 100 // Stack platforms 100 pixels apart
+        Math.random() * (app.screen.width - 60),
+        app.screen.height - 100 - i * 100
     );
 }
 
@@ -63,6 +93,12 @@ const keys = {};
 
 window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
+    if (!gameStarted && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+        gameStarted = true;
+        startText.visible = false;
+        startTextLine2.visible = false;
+        velocityY = jumpStrength;  // Initial jump when game starts
+    }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -77,44 +113,83 @@ const style = new PIXI.TextStyle({
     fontWeight: 'bold',
 });
 const scoreText = new PIXI.Text('Score: 0', style);
-scoreText.anchor.set(0.5, 0); // Center horizontally
+scoreText.anchor.set(0.5, 0);
 scoreText.x = app.screen.width / 2;
-scoreText.y = 10; // Position at the top with padding
+scoreText.y = 10;
 app.stage.addChild(scoreText);
 
+// Start Game Text (Split into two lines)
+const startStyle = new PIXI.TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 32,
+    fill: 'grey',
+    fontWeight: 'bold',
+});
+const startText = new PIXI.Text('CLICK AN ARROW', startStyle);
+startText.anchor.set(0.5);
+startText.x = app.screen.width / 2;
+startText.y = app.screen.height / 2 - 20;
+app.stage.addChild(startText);
+
+const startTextLine2 = new PIXI.Text('TO BEGIN!', startStyle);
+startTextLine2.anchor.set(0.5);
+startTextLine2.x = app.screen.width / 2;
+startTextLine2.y = app.screen.height / 2 + 20;
+app.stage.addChild(startTextLine2);
+
 let score = 0;
+let textFlashTimer = 0;
+const TEXT_VISIBLE_DURATION = 25; // 0.5 seconds at 60fps
+const TEXT_HIDDEN_DURATION = 17;  // 0.25 seconds at 60fps
 
 // 9. Game Loop
 app.ticker.add(() => {
+    // Handle text flashing when game hasn't started
+    if (!gameStarted) {
+        textFlashTimer = (textFlashTimer + 1) % (TEXT_VISIBLE_DURATION + TEXT_HIDDEN_DURATION);
+        const isVisible = textFlashTimer < TEXT_VISIBLE_DURATION;
+        startText.visible = isVisible;
+        startTextLine2.visible = isVisible;
+        return;  // Don't update game state until game starts
+    }
+
     // Apply gravity
     velocityY += gravity;
     character.y += velocityY;
 
-    // Move left and right
+    // Move left and right with sprite changes
     if (keys['ArrowLeft']) {
         character.x -= 5;
-    }
-    if (keys['ArrowRight']) {
+        character.texture = characterTextures.left;
+        character.lastDirection = 'left';
+    } else if (keys['ArrowRight']) {
         character.x += 5;
+        character.texture = characterTextures.right;
+        character.lastDirection = 'right';
+    } else {
+        character.texture = characterTextures[character.lastDirection];
     }
 
     // Wrap around the screen horizontally
-    if (character.x > app.screen.width) {
-        character.x = -character.width;
-    } else if (character.x + character.width < 0) {
-        character.x = app.screen.width;
+    if (character.x > app.screen.width + character.width / 2) {
+        character.x = -character.width / 2;
+    } else if (character.x < -character.width / 2) {
+        character.x = app.screen.width + character.width / 2;
     }
 
-    // Collision Detection with One-Way Platforms
+    // Collision Detection with One-Way Platforms - Updated for feet-only detection
+    const characterFeetY = character.y + character.height / 3; // Adjusted feet position
+
     for (let platform of platforms) {
         if (
-            character.x + character.width > platform.x && // Collision on x-axis
-            character.x < platform.x + platform.width &&
-            character.y + character.height > platform.y && // Collision on y-axis
-            character.y + character.height - velocityY <= platform.y && // Was above platform last frame
-            velocityY > 0 // Moving downwards
+            character.x + character.width / 3 > platform.x &&
+            character.x - character.width / 3 < platform.x + platform.width &&
+            characterFeetY > platform.y &&
+            characterFeetY - velocityY <= platform.y &&
+            velocityY > 0
         ) {
-            velocityY = jumpStrength; // Jump back up
+            velocityY = jumpStrength;
+            break;
         }
     }
 
@@ -124,45 +199,52 @@ app.ticker.add(() => {
         character.y = app.screen.height / 2;
 
         // Move platforms down
-        for (let platform of platforms) {
+        for (let i = platforms.length - 1; i >= 0; i--) { // Iterate backwards to safely remove
+            let platform = platforms[i];
             platform.y += offset;
 
-            // Remove platforms that are off-screen
             if (platform.y > app.screen.height) {
                 app.stage.removeChild(platform);
-                platforms.splice(platforms.indexOf(platform), 1);
+                platforms.splice(i, 1);
             }
         }
 
-        // Generate new platforms above if necessary
-        let highestPlatformY = Math.min(...platforms.map(p => p.y));
+        // Generate new platforms
+        let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : app.screen.height - 100;
 
         while (highestPlatformY > 0) {
             let x = Math.random() * (app.screen.width - 60);
-            let y = highestPlatformY - 100; // Space platforms 100 pixels apart
+            let y = highestPlatformY - 100;
             createPlatform(x, y);
             highestPlatformY = y;
         }
 
-        // Update score based on character's cumulative ascent
+        // Update score
         score += offset;
         scoreText.text = 'Score: ' + Math.floor(score);
     }
 
     // Game Over Condition
-    if (character.y > app.screen.height) {
+    if (character.y - character.height / 2 > app.screen.height) {
         alert('Game Over!');
-        // Reset the game
         resetGame();
     }
 });
 
 // 10. Reset Game Function
 function resetGame() {
-    // Reset character position
-    character.x = app.screen.width / 2 - 15;
-    character.y = app.screen.height - 90;
+    // Reset character position and texture
+    character.x = app.screen.width / 2;
+    character.y = app.screen.height - 45; // Adjusted to match floor position
+    character.texture = characterTextures.right;
+    character.lastDirection = 'right';
     velocityY = 0;
+    gameStarted = false;
+
+    // Reset text flash timer
+    textFlashTimer = 0;
+    startText.visible = true;
+    startTextLine2.visible = true;
 
     // Reset score
     score = 0;
@@ -175,12 +257,12 @@ function resetGame() {
     platforms = [];
 
     // Recreate floor and initial platforms
-    createFloor();
+    floor = createFloor();  // Update floor reference
 
     for (let i = 0; i < 10; i++) {
         createPlatform(
             Math.random() * (app.screen.width - 60),
-            app.screen.height - 100 - i * 100 // Stack platforms 100 pixels apart
+            app.screen.height - 100 - i * 100
         );
     }
 }
