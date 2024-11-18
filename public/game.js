@@ -49,6 +49,17 @@ let gameStarted = false;
 // 4. Platforms Array
 let platforms = [];
 
+// King variables
+let kingSpawned = false;
+let kingCollected = false;
+let kingPlatform = null;
+let kingSprite = null;
+
+// Modal dialog variables
+let modalContainer;
+let modalText;
+let modalButton;
+
 // 5. Create the Floor
 function createFloor() {
     const floor = new PIXI.Graphics();
@@ -78,6 +89,119 @@ function createPlatform(x, y) {
     platform.y = y;
     app.stage.addChild(platform);
     platforms.push(platform);
+}
+
+// Function to create the king platform and sprite
+function createKingPlatform() {
+    // Create the large platform
+    kingPlatform = new PIXI.Sprite(platformTexture);
+    kingPlatform.width = app.screen.width - 20; // Almost entire width
+    kingPlatform.height = 15;
+    kingPlatform.x = 10; // Centered
+    kingPlatform.y = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) - 100 : 0;
+
+    app.stage.addChild(kingPlatform);
+    platforms.push(kingPlatform);
+
+    // Create the king sprite with high-quality texture settings
+    const kingTextureSettings = {
+        scaleMode: PIXI.SCALE_MODES.LINEAR,
+        mipmap: PIXI.MIPMAP_MODES.ON,
+        anisotropicLevel: 16,
+        quality: 1
+    };
+    const kingTexture = PIXI.Texture.from('king.png', kingTextureSettings);
+
+    kingSprite = new PIXI.Sprite(kingTexture);
+    kingSprite.anchor.set(0.5, 1); // Anchor at bottom center
+
+    // Set the king's width to one-third of the game's width
+    kingSprite.width = app.screen.width / 3; // Approximately 133 pixels
+    // Adjust the height to maintain aspect ratio
+    kingSprite.scale.y = kingSprite.scale.x;
+
+    kingSprite.x = app.screen.width / 2;
+    kingSprite.y = kingPlatform.y; // Place on top of the platform
+
+    app.stage.addChild(kingSprite);
+}
+
+// Function to show the victory modal dialog
+function showVictoryModal() {
+    // Create a container for the modal
+    modalContainer = new PIXI.Container();
+    
+    // Create a semi-transparent background
+    const background = new PIXI.Graphics();
+    background.beginFill(0x000000, 0.5); // Black with 50% opacity
+    background.drawRect(0, 0, app.screen.width, app.screen.height);
+    background.endFill();
+    modalContainer.addChild(background);
+    
+    // Create the modal box
+    const modalBox = new PIXI.Graphics();
+    modalBox.beginFill(0xFFFFFF); // White background
+    modalBox.lineStyle(2, 0x000000); // Black border
+    modalBox.drawRoundedRect(0, 0, app.screen.width - 100, 200, 15);
+    modalBox.endFill();
+    modalBox.x = 50; // Centered horizontally
+    modalBox.y = (app.screen.height - 200) / 2; // Centered vertically
+    modalContainer.addChild(modalBox);
+    
+    // Create the text
+    const textStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 24,
+        fill: '#000000',
+        wordWrap: true,
+        wordWrapWidth: app.screen.width - 120,
+        align: 'center'
+    });
+    modalText = new PIXI.Text('Congrats! You Conquered This Country!', textStyle);
+    modalText.anchor.set(0.5);
+    modalText.x = app.screen.width / 2;
+    modalText.y = modalBox.y + 60;
+    modalContainer.addChild(modalText);
+    
+    // Create the button
+    modalButton = new PIXI.Graphics();
+    modalButton.beginFill(0x00AAFF); // Blue color
+    modalButton.drawRoundedRect(0, 0, 150, 50, 10);
+    modalButton.endFill();
+    modalButton.x = (app.screen.width - 150) / 2;
+    modalButton.y = modalBox.y + 120;
+    modalButton.interactive = true;
+    modalButton.buttonMode = true;
+    modalButton.on('pointerdown', onModalButtonClick);
+    modalContainer.addChild(modalButton);
+    
+    // Button text
+    const buttonText = new PIXI.Text('Play Again', {
+        fontFamily: 'Arial',
+        fontSize: 20,
+        fill: '#FFFFFF'
+    });
+    buttonText.anchor.set(0.5);
+    buttonText.x = modalButton.x + 75; // Half of button width
+    buttonText.y = modalButton.y + 25; // Half of button height
+    modalContainer.addChild(buttonText);
+    
+    app.stage.addChild(modalContainer);
+    
+    // Pause the game loop
+    app.ticker.stop();
+}
+
+function onModalButtonClick() {
+    // Remove the modal from the stage
+    app.stage.removeChild(modalContainer);
+    modalContainer = null;
+    
+    // Reset the game
+    resetGame();
+    
+    // Restart the game loop
+    app.ticker.start();
 }
 
 // Initial Platform Generation
@@ -139,8 +263,8 @@ app.stage.addChild(startTextLine2);
 
 let score = 0;
 let textFlashTimer = 0;
-const TEXT_VISIBLE_DURATION = 25; // 0.5 seconds at 60fps
-const TEXT_HIDDEN_DURATION = 17;  // 0.25 seconds at 60fps
+const TEXT_VISIBLE_DURATION = 30; // 0.5 seconds at 60fps
+const TEXT_HIDDEN_DURATION = 15;  // 0.25 seconds at 60fps
 
 // 9. Game Loop
 app.ticker.add(() => {
@@ -193,6 +317,21 @@ app.ticker.add(() => {
         }
     }
 
+    // Collision with king
+    if (kingSprite && !kingCollected) {
+        let kingBounds = kingSprite.getBounds();
+        let characterBounds = character.getBounds();
+
+        if (characterBounds.x + characterBounds.width > kingBounds.x &&
+            characterBounds.x < kingBounds.x + kingBounds.width &&
+            characterBounds.y + characterBounds.height > kingBounds.y &&
+            characterBounds.y < kingBounds.y + kingBounds.height) {
+            // Collision detected
+            kingCollected = true;
+            showVictoryModal();
+        }
+    }
+
     // Scroll the map when the character reaches the middle
     if (character.y < app.screen.height / 2) {
         const offset = app.screen.height / 2 - character.y;
@@ -206,22 +345,45 @@ app.ticker.add(() => {
             if (platform.y > app.screen.height) {
                 app.stage.removeChild(platform);
                 platforms.splice(i, 1);
+
+                // If the platform is the kingPlatform, remove the kingSprite as well
+                if (platform === kingPlatform) {
+                    if (kingSprite) {
+                        app.stage.removeChild(kingSprite);
+                        kingSprite = null;
+                    }
+                    kingPlatform = null;
+                }
             }
         }
 
-        // Generate new platforms
-        let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : app.screen.height - 100;
-
-        while (highestPlatformY > 0) {
-            let x = Math.random() * (app.screen.width - 60);
-            let y = highestPlatformY - 100;
-            createPlatform(x, y);
-            highestPlatformY = y;
+        // Move king sprite down if it exists
+        if (kingSprite) {
+            kingSprite.y += offset;
         }
 
         // Update score
         score += offset;
         scoreText.text = 'Score: ' + Math.floor(score);
+
+        // Check if score >= 1000 and king not spawned yet
+        if (score >= 1000 && !kingSpawned) {
+            createKingPlatform();
+            kingSpawned = true;
+        }
+
+        // Generate new platforms only if king not spawned
+        if (!kingSpawned) {
+            // Generate new platforms
+            let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : app.screen.height - 100;
+
+            while (highestPlatformY > 0) {
+                let x = Math.random() * (app.screen.width - 60);
+                let y = highestPlatformY - 100;
+                createPlatform(x, y);
+                highestPlatformY = y;
+            }
+        }
     }
 
     // Game Over Condition
@@ -255,6 +417,20 @@ function resetGame() {
         app.stage.removeChild(platform);
     }
     platforms = [];
+
+    // Remove existing king platform and king sprite
+    if (kingPlatform) {
+        app.stage.removeChild(kingPlatform);
+        kingPlatform = null;
+    }
+    if (kingSprite) {
+        app.stage.removeChild(kingSprite);
+        kingSprite = null;
+    }
+
+    // Reset king variables
+    kingSpawned = false;
+    kingCollected = false;
 
     // Recreate floor and initial platforms
     floor = createFloor();  // Update floor reference
