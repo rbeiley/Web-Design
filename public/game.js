@@ -1,14 +1,50 @@
 // Declare variables at the top
 let app;
 let gameStarted = false; // Keep track of whether the game physics should update
+let db = firebase.firestore(); // Initialize Firestore
+let levels = {}; // Store level data
+let selectedLevel = null; // Keep track of the selected level
 
-// Event listener for clicking on the country
-document.getElementById('country-usa').addEventListener('click', function(event) {
-    event.preventDefault();
-    if (!app) { // Check if the game is not already initialized
-        initGame();
-    }
-});
+// Function to populate the main menu with countries from Firebase
+function populateCountryList() {
+    const countryListElement = document.getElementById('countries');
+
+    // Fetch the 'Levels' collection from Firestore
+    db.collection('Levels').get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            const levelData = doc.data();
+            const countryName = levelData.Country;
+            const levelLength = levelData['Level Length'];
+            const kingImage = levelData['King Image'];
+
+            // Store level data for later use
+            levels[countryName] = {
+                levelLength: levelLength,
+                kingImage: kingImage
+            };
+
+            // Create a list item for the country
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '#';
+            a.textContent = countryName;
+            a.addEventListener('click', function(event) {
+                event.preventDefault();
+                if (!app) { // Check if the game is not already initialized
+                    selectedLevel = levels[countryName];
+                    initGame();
+                }
+            });
+            li.appendChild(a);
+            countryListElement.appendChild(li);
+        });
+    }).catch((error) => {
+        console.error("Error fetching levels: ", error);
+    });
+}
+
+// Call the function to populate the country list
+populateCountryList();
 
 // Function to initialize the game
 function initGame() {
@@ -90,6 +126,10 @@ function initGame() {
     const TEXT_VISIBLE_DURATION = 30; // 0.5 seconds at 60fps
     const TEXT_HIDDEN_DURATION = 15;  // 0.25 seconds at 60fps
 
+    // Get level parameters from selectedLevel
+    const levelLength = selectedLevel.levelLength || 3000; // Default to 3000 if not specified
+    const kingImageName = selectedLevel.kingImage || 'king.png'; // Default to 'king.png' if not specified
+
     // 5. Create the Floor
     function createFloor() {
         const floor = new PIXI.Graphics();
@@ -152,7 +192,7 @@ function initGame() {
             anisotropicLevel: 16,
             quality: 1
         };
-        const kingTexture = PIXI.Texture.from('king.png', kingTextureSettings);
+        const kingTexture = PIXI.Texture.from(kingImageName, kingTextureSettings);
 
         kingSprite = new PIXI.Sprite(kingTexture);
         kingSprite.anchor.set(0.5, 1); // Anchor at bottom center
@@ -484,8 +524,8 @@ function initGame() {
             score += offset;
             scoreText.text = 'Score: ' + Math.floor(score);
 
-            // Check if score >= 3000 and king not spawned yet
-            if (score >= 3000 && !kingSpawned) {
+            // Check if score >= levelLength and king not spawned yet
+            if (score >= levelLength && !kingSpawned) {
                 createKingPlatform();
                 kingSpawned = true;
             }
@@ -534,5 +574,6 @@ function initGame() {
         // Show the main menu
         document.getElementById('main-menu').style.display = 'flex';
         gameStarted = false; // Reset the gameStarted variable
+        selectedLevel = null; // Reset the selected level
     }
 }
