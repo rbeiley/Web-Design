@@ -4,6 +4,7 @@ let gameStarted = false; // Keep track of whether the game physics should update
 let db = firebase.firestore(); // Initialize Firestore
 let levels = {}; // Store level data
 let selectedLevel = null; // Keep track of the selected level
+const characterWidth = 55; // Define character width for use in cloud sizing
 
 // Function to populate the main menu with countries from Firebase
 function populateCountryList() {
@@ -57,10 +58,17 @@ function initGame() {
     app = new PIXI.Application({
         width: 400,
         height: 600,
-        backgroundColor: 0xFFFFFF,
+        backgroundColor: 0xADD8E6, // Light blue color for the background
         antialias: true,
     });
     document.getElementById('game-container').appendChild(app.view);
+
+    // Create background container for clouds
+    const backgroundContainer = new PIXI.Container();
+    app.stage.addChild(backgroundContainer);
+
+    // Clouds array
+    let clouds = [];
 
     // 2. Create the Character using Sprites with maximum quality settings
     let character;
@@ -81,8 +89,8 @@ function initGame() {
 
     // Initialize character sprite with right-facing texture
     character = new PIXI.Sprite(characterTextures.right);
-    character.width = 55;
-    character.height = 55;
+    character.width = characterWidth;
+    character.height = characterWidth;
 
     character.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
     character.texture.baseTexture.mipmap = PIXI.MIPMAP_MODES.ON;
@@ -94,6 +102,35 @@ function initGame() {
     character.lastDirection = 'right';
 
     app.stage.addChild(character);
+
+    // Call the function to create clouds after character is initialized
+    createClouds();
+
+    // Function to create clouds
+function createClouds() {
+    // Number of clouds to create (reduced to 2)
+    const numClouds = 2; // Adjusted from 3 to 2
+
+    for (let i = 0; i < numClouds; i++) {
+        // Load cloud texture
+        const cloudTexture = PIXI.Texture.from('cloud.png'); // Ensure 'cloud.png' exists in your directory
+        const cloud = new PIXI.Sprite(cloudTexture);
+        cloud.anchor.set(0.5);
+
+        // Adjust cloud size
+        // Set the cloud's width to 2.5 times the character's width (smaller clouds)
+        cloud.width = 2.5 * characterWidth; // characterWidth is 55, so cloud.width is about 137.5 pixels
+        // Cut the height of clouds in half compared to original proportion
+        cloud.height = (cloud.texture.height * (cloud.width / cloud.texture.width)) / 1.8;
+
+        // Random position
+        cloud.x = Math.random() * app.screen.width;
+        cloud.y = Math.random() * app.screen.height;
+
+        backgroundContainer.addChild(cloud);
+        clouds.push(cloud);
+    }
+}
 
     // Variables for Movement and Physics
     let velocityY = 0;
@@ -192,21 +229,35 @@ function initGame() {
             anisotropicLevel: 16,
             quality: 1
         };
-        const kingTexture = PIXI.Texture.from(kingImageName, kingTextureSettings);
 
-        kingSprite = new PIXI.Sprite(kingTexture);
+        // Create the king sprite
+        kingSprite = new PIXI.Sprite.from(kingImageName, kingTextureSettings);
         kingSprite.anchor.set(0.5, 1); // Anchor at bottom center
 
-        // Fixing the king image rendering issue
-        // Set the king's width based on desired proportion of the screen width
-        kingSprite.width = app.screen.width / 3; // Approximately 133 pixels
-        // Adjust the height to maintain aspect ratio
-        kingSprite.scale.y = kingSprite.scale.x / kingSprite.texture.width * kingSprite.texture.height;
+        // Wait until texture is loaded before setting size
+        if (kingSprite.texture.baseTexture.valid) {
+            // Texture is already loaded
+            adjustKingSpriteSize();
+        } else {
+            // Wait for texture to load
+            kingSprite.texture.baseTexture.on('loaded', adjustKingSpriteSize);
+        }
 
-        kingSprite.x = app.screen.width / 2;
-        kingSprite.y = kingPlatform.y; // Place on top of the platform
+        function adjustKingSpriteSize() {
+            // Set the desired width
+            const desiredWidth = app.screen.width / 3; // Approximately 133 pixels
+            // Calculate scale factor
+            const scaleFactor = desiredWidth / kingSprite.texture.width;
+            // Set scale to maintain aspect ratio
+            kingSprite.scale.set(scaleFactor);
 
-        app.stage.addChild(kingSprite);
+            // Position the king sprite
+            kingSprite.x = app.screen.width / 2;
+            kingSprite.y = kingPlatform.y; // Place on top of the platform
+
+            // Add the king sprite to the stage
+            app.stage.addChild(kingSprite);
+        }
     }
 
     // Function to create a monster
@@ -518,6 +569,16 @@ function initGame() {
             // Move king sprite down if it exists
             if (kingSprite) {
                 kingSprite.y += offset;
+            }
+
+            // Move clouds down at a slower rate
+            for (let cloud of clouds) {
+                cloud.y += offset * 0.2; // Move clouds at 15% of the offset
+                // If cloud goes off the bottom, reset it to the top
+                if (cloud.y > app.screen.height + cloud.height) {
+                    cloud.y = -cloud.height;
+                    cloud.x = Math.random() * app.screen.width;
+                }
             }
 
             // Update score
