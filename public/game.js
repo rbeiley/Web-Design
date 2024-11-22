@@ -231,7 +231,7 @@ function createClouds() {
         };
 
         // Create the king sprite
-        kingSprite = new PIXI.Sprite.from(kingImageName, kingTextureSettings);
+        kingSprite = PIXI.Sprite.from(kingImageName, kingTextureSettings);
         kingSprite.anchor.set(0.5, 1); // Anchor at bottom center
 
         // Wait until texture is loaded before setting size
