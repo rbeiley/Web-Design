@@ -29,47 +29,27 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
             z-index: 1;
         }
         #main-menu h1 {
             color: #2E8B57; /* Darker green */
-            margin-bottom: 20px;
+            margin: 20px;
             text-shadow: 2px 2px 4px #FFFFFF; /* Add shadow for better readability */
-        }
-        #country-list {
-            background-color: rgba(245, 245, 220, 0.8); /* Semi-transparent beige */
-            padding: 20px;
-            border: 2px solid #2E8B57;
-            border-radius: 10px;
             text-align: center;
-            max-height: 70%; /* To handle overflow if many countries */
-            overflow-y: auto;
         }
-        #country-list h2 {
-            margin-top: 0;
+        #country-labels {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .country-label {
+            position: absolute;
             color: #2E8B57;
-            text-shadow: 1px 1px 2px #FFFFFF;
-        }
-        #country-list ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        #country-list li {
-            margin: 10px 0;
-        }
-        #country-list a {
-            text-decoration: none;
-            color: #2E8B57;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             text-shadow: 1px 1px 2px #FFFFFF;
-        }
-        #country-list a:hover {
-            color: #006400; /* Dark green */
+            cursor: pointer;
+            transform: translate(-50%, -50%); /* Center the label at the position */
         }
         /* Canvas styling */
         #game-container {
@@ -90,11 +70,8 @@
     <!-- Main Menu -->
     <div id="main-menu">
         <h1>Doodle Conquest</h1>
-        <div id="country-list">
-            <h2>List of Countries to Conquer:</h2>
-            <ul id="countries">
-                <!-- Countries will be dynamically populated here -->
-            </ul>
+        <div id="country-labels">
+            <!-- Country labels will be dynamically added here -->
         </div>
     </div>
     <!-- Game Container -->
@@ -106,11 +83,12 @@
         // Your web app's Firebase configuration
         var firebaseConfig = {
             apiKey: "AIzaSyAkDDf0Ry4pbAbaZkZPZ6eiKOCf0ELG6Ag",
-            authDomain: "worlddominationgameroen.firebaseapp.com",
-            projectId: "worlddominationgameroen",
-            storageBucket: "worlddominationgameroen.appspot.com",
-            messagingSenderId: "738029716231",
-            appId: "1:738029716231:web:d7051b55db16bf3dda7ba2",
+  authDomain: "worlddominationgameroen.firebaseapp.com",
+  projectId: "worlddominationgameroen",
+  storageBucket: "worlddominationgameroen.firebasestorage.app",
+  messagingSenderId: "738029716231",
+  appId: "1:738029716231:web:d7051b55db16bf3dda7ba2",
+  measurementId: "G-BR7WE3YE0Q"
         };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);

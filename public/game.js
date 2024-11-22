@@ -4,11 +4,12 @@ let gameStarted = false; // Keep track of whether the game physics should update
 let db = firebase.firestore(); // Initialize Firestore
 let levels = {}; // Store level data
 let selectedLevel = null; // Keep track of the selected level
-const characterWidth = 55; // Define character width for use in cloud sizing
+let mainMenu = document.getElementById('main-menu');
+const characterWidth = 55; // Define character width for use throughout the game
 
 // Function to populate the main menu with countries from Firebase
-function populateCountryList() {
-    const countryListElement = document.getElementById('countries');
+function populateCountryLabels() {
+    const countryLabelsContainer = document.getElementById('country-labels');
 
     // Fetch the 'Levels' collection from Firestore
     db.collection('Levels').get().then((querySnapshot) => {
@@ -17,6 +18,14 @@ function populateCountryList() {
             const countryName = levelData.Country;
             const levelLength = levelData['Level Length'];
             const kingImage = levelData['King Image'];
+            const x = levelData.x;
+            const y = levelData.y;
+
+            // Check if x and y positions are present
+            if (x === undefined || y === undefined) {
+                console.warn(`x and y positions not defined for ${countryName}`);
+                return;
+            }
 
             // Store level data for later use
             levels[countryName] = {
@@ -24,28 +33,33 @@ function populateCountryList() {
                 kingImage: kingImage
             };
 
-            // Create a list item for the country
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '#';
-            a.textContent = countryName;
-            a.addEventListener('click', function(event) {
+            // Create a label for the country
+            const label = document.createElement('div');
+            label.classList.add('country-label');
+            label.textContent = countryName;
+
+            // Position the label
+            label.style.left = x + '%';
+            label.style.top = y + '%';
+
+            // Add click event listener
+            label.addEventListener('click', function(event) {
                 event.preventDefault();
                 if (!app) { // Check if the game is not already initialized
                     selectedLevel = levels[countryName];
                     initGame();
                 }
             });
-            li.appendChild(a);
-            countryListElement.appendChild(li);
+
+            countryLabelsContainer.appendChild(label);
         });
     }).catch((error) => {
         console.error("Error fetching levels: ", error);
     });
 }
 
-// Call the function to populate the country list
-populateCountryList();
+// Call the function to populate the country labels
+populateCountryLabels();
 
 // Function to initialize the game
 function initGame() {
@@ -69,6 +83,34 @@ function initGame() {
 
     // Clouds array
     let clouds = [];
+
+    // Function to create clouds
+    function createClouds() {
+        // Number of clouds to create
+        const numClouds = 2; // Adjusted to have 1-2 clouds on screen
+        for (let i = 0; i < numClouds; i++) {
+            // Load cloud texture
+            const cloudTexture = PIXI.Texture.from('cloud.png'); // Ensure 'cloud.png' exists in your directory
+            const cloud = new PIXI.Sprite(cloudTexture);
+            cloud.anchor.set(0.5);
+
+            // Adjust cloud size
+            // Set the cloud's width to 2.5 times the character's width (smaller clouds)
+            cloud.width = 2.5 * characterWidth; // characterWidth is 55, so cloud.width is about 137.5 pixels
+            // Cut the height of clouds in half compared to original proportion
+            cloud.height = (cloud.texture.height * (cloud.width / cloud.texture.width)) / 2;
+
+            // Random position
+            cloud.x = Math.random() * app.screen.width;
+            cloud.y = Math.random() * app.screen.height;
+
+            backgroundContainer.addChild(cloud);
+            clouds.push(cloud);
+        }
+    }
+
+    // Call the function to create clouds after character is initialized
+    createClouds();
 
     // 2. Create the Character using Sprites with maximum quality settings
     let character;
@@ -102,35 +144,6 @@ function initGame() {
     character.lastDirection = 'right';
 
     app.stage.addChild(character);
-
-    // Call the function to create clouds after character is initialized
-    createClouds();
-
-    // Function to create clouds
-function createClouds() {
-    // Number of clouds to create (reduced to 2)
-    const numClouds = 2; // Adjusted from 3 to 2
-
-    for (let i = 0; i < numClouds; i++) {
-        // Load cloud texture
-        const cloudTexture = PIXI.Texture.from('cloud.png'); // Ensure 'cloud.png' exists in your directory
-        const cloud = new PIXI.Sprite(cloudTexture);
-        cloud.anchor.set(0.5);
-
-        // Adjust cloud size
-        // Set the cloud's width to 2.5 times the character's width (smaller clouds)
-        cloud.width = 2.5 * characterWidth; // characterWidth is 55, so cloud.width is about 137.5 pixels
-        // Cut the height of clouds in half compared to original proportion
-        cloud.height = (cloud.texture.height * (cloud.width / cloud.texture.width)) / 1.8;
-
-        // Random position
-        cloud.x = Math.random() * app.screen.width;
-        cloud.y = Math.random() * app.screen.height;
-
-        backgroundContainer.addChild(cloud);
-        clouds.push(cloud);
-    }
-}
 
     // Variables for Movement and Physics
     let velocityY = 0;
@@ -340,7 +353,7 @@ function createClouds() {
         modalContainer.addChild(modalButton);
 
         // Button text
-        const buttonText = new PIXI.Text('Main Menu', { // Changed from 'Play Again' to 'Main Menu'
+        const buttonText = new PIXI.Text('Main Menu', {
             fontFamily: 'Arial',
             fontSize: 20,
             fill: '#FFFFFF'
@@ -571,9 +584,9 @@ function createClouds() {
                 kingSprite.y += offset;
             }
 
-            // Move clouds down at a slower rate
+            // Move clouds down at a faster rate
             for (let cloud of clouds) {
-                cloud.y += offset * 0.2; // Move clouds at 15% of the offset
+                cloud.y += offset * 0.15; // Adjusted movement speed
                 // If cloud goes off the bottom, reset it to the top
                 if (cloud.y > app.screen.height + cloud.height) {
                     cloud.y = -cloud.height;
@@ -592,7 +605,7 @@ function createClouds() {
             }
 
             // Generate monsters
-            if (score >= 1000 && score >= nextMonsterSpawnScore) {
+            if (!kingSpawned && score >= 1000 && score >= nextMonsterSpawnScore) {
                 // Generate a monster above the highest platform
                 let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : 0;
                 createMonster(highestPlatformY - 200); // Place monster above the highest platform
@@ -633,7 +646,7 @@ function createClouds() {
         // Hide the game container
         document.getElementById('game-container').style.display = 'none';
         // Show the main menu
-        document.getElementById('main-menu').style.display = 'flex';
+        document.getElementById('main-menu').style.display = 'block';
         gameStarted = false; // Reset the gameStarted variable
         selectedLevel = null; // Reset the selected level
     }
