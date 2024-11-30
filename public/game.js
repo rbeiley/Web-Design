@@ -1,16 +1,182 @@
-// Declare variables at the top
+// Initialize Firebase Firestore
+let db = firebase.firestore();
+
+// Variables
 let app;
 let gameStarted = false; // Keep track of whether the game physics should update
-let db = firebase.firestore(); // Initialize Firestore
 let levels = {}; // Store level data
 let selectedLevel = null; // Keep track of the selected level
-let mainMenu = document.getElementById('main-menu');
 const characterWidth = 55; // Define character width for use throughout the game
 
-// Function to populate the main menu with countries from Firebase
-function populateCountryLabels() {
-    const countryLabelsContainer = document.getElementById('country-labels');
+let currentUser = null; // Keep track of the current user
+let users = {}; // Store user data
 
+// DOM elements
+const mainMenu = document.getElementById('main-menu');
+const gameMap = document.getElementById('game-map');
+const gameContainer = document.getElementById('game-container');
+const usernameSelect = document.getElementById('username-select');
+const newUsernameInput = document.getElementById('new-username-input');
+const confirmButton = document.getElementById('confirm-button');
+const countriesConqueredText = document.getElementById('countries-conquered-text');
+const countryLabelsContainer = document.getElementById('country-labels');
+
+// Function to populate the username dropdown
+function populateUsernames() {
+    usernameSelect.innerHTML = ''; // Clear any existing options
+
+    // Add the "New User" option
+    const newUserOption = document.createElement('option');
+    newUserOption.value = 'new_user';
+    newUserOption.textContent = 'New User';
+    usernameSelect.appendChild(newUserOption);
+
+    // Set "New User" as the selected option
+    usernameSelect.value = 'new_user';
+    // Show the new username input box
+    newUsernameInput.style.display = 'inline-block';
+
+    // Fetch the 'Users' collection from Firestore
+    db.collection('Users').get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            const username = doc.id; // Use document ID as username
+            const option = document.createElement('option');
+            option.value = username;
+            option.textContent = username;
+            usernameSelect.appendChild(option);
+            // Store user data for later use
+            users[username] = doc.data();
+        });
+    }).catch((error) => {
+        console.error("Error fetching users: ", error);
+    });
+}
+
+// Call the function to populate the username dropdown
+populateUsernames();
+
+// Event listeners for username selection
+usernameSelect.addEventListener('change', function() {
+    const selectedValue = usernameSelect.value;
+    if (selectedValue === 'new_user') {
+        // Show input for new username
+        newUsernameInput.style.display = 'inline-block';
+    } else {
+        // Hide new username input
+        newUsernameInput.style.display = 'none';
+    }
+});
+
+confirmButton.addEventListener('click', function() {
+    const selectedValue = usernameSelect.value;
+    if (selectedValue === 'new_user') {
+        const newUsername = newUsernameInput.value.trim();
+        if (newUsername) {
+            // Check if username already exists
+            if (users[newUsername]) {
+                alert('Username already exists. Please choose a different username.');
+            } else {
+                // Create new user in Firebase
+                db.collection('Users').doc(newUsername).set({
+                    conqueredCountries: []
+                }).then(() => {
+                    // Add new user to the users object
+                    users[newUsername] = { conqueredCountries: [] };
+                    // Set current user
+                    currentUser = newUsername;
+                    // Proceed to game map screen
+                    proceedToGameMap();
+                }).catch((error) => {
+                    console.error("Error creating user: ", error);
+                });
+            }
+        } else {
+            alert('Please enter a username.');
+        }
+    } else {
+        // Existing user selected
+        currentUser = selectedValue;
+        // Load user data
+        loadUserData(currentUser).then(() => {
+            // Proceed to game map screen
+            proceedToGameMap();
+        }).catch((error) => {
+            console.error("Error loading user data: ", error);
+        });
+    }
+});
+
+// Function to load user data
+function loadUserData(username) {
+    return db.collection('Users').doc(username).get().then((doc) => {
+        if (doc.exists) {
+            users[username] = doc.data();
+        } else {
+            console.error('User data not found for username:', username);
+            users[username] = { conqueredCountries: [] };
+        }
+    }).catch((error) => {
+        console.error("Error loading user data: ", error);
+    });
+}
+
+// Function to proceed to the game map screen
+function proceedToGameMap() {
+    // Hide the main menu
+    mainMenu.style.display = 'none';
+    // Show the game map
+    gameMap.style.display = 'block';
+    // Update the Countries Conquered text
+    updateCountriesConqueredText();
+    // Update the country labels
+    updateCountryLabels();
+}
+
+// Function to update the Countries Conquered text
+function updateCountriesConqueredText() {
+    if (currentUser && users[currentUser]) {
+        const conqueredCountries = users[currentUser].conqueredCountries || [];
+        countriesConqueredText.textContent = 'Countries Conquered: ' + conqueredCountries.length;
+    } else {
+        countriesConqueredText.textContent = 'Countries Conquered: 0';
+    }
+}
+
+// Store labels for each level
+let levelLabels = {};
+
+// Function to update country labels
+function updateCountryLabels() {
+    const conqueredCountries = users[currentUser].conqueredCountries || [];
+
+    for (let countryName in levelLabels) {
+        const label = levelLabels[countryName];
+        if (conqueredCountries.includes(countryName)) {
+            // Mark the country as conquered
+            label.style.color = '#CCCCCC'; // Grey color
+            label.style.textDecoration = 'line-through';
+            label.onclick = function(event) {
+                event.preventDefault();
+                alert('You have already conquered this country.');
+            };
+        } else {
+            // Ensure the country is clickable
+            label.style.color = '#2E8B57'; // Original color
+            label.style.textDecoration = 'none';
+            label.onclick = function(event) {
+                event.preventDefault();
+                if (!app && currentUser) {
+                    selectedLevel = levels[countryName];
+                    selectedLevel.countryName = countryName; // Store the country name in selectedLevel
+                    initGame();
+                }
+            };
+        }
+    }
+}
+
+// Function to populate the country labels
+function populateCountryLabels() {
     // Fetch the 'Levels' collection from Firestore
     db.collection('Levels').get().then((querySnapshot) => {
         querySnapshot.forEach((doc) => {
@@ -42,14 +208,8 @@ function populateCountryLabels() {
             label.style.left = x + '%';
             label.style.top = y + '%';
 
-            // Add click event listener
-            label.addEventListener('click', function(event) {
-                event.preventDefault();
-                if (!app) { // Check if the game is not already initialized
-                    selectedLevel = levels[countryName];
-                    initGame();
-                }
-            });
+            // Store the label for later updates
+            levelLabels[countryName] = label;
 
             countryLabelsContainer.appendChild(label);
         });
@@ -63,10 +223,49 @@ populateCountryLabels();
 
 // Function to initialize the game
 function initGame() {
-    // Hide the main menu
-    document.getElementById('main-menu').style.display = 'none';
+    // Hide the game map
+    gameMap.style.display = 'none';
     // Show the game container
-    document.getElementById('game-container').style.display = 'flex';
+    gameContainer.style.display = 'flex';
+
+    // Variables for Movement and Physics
+    let velocityY = 0;
+    const gravity = 0.5;
+    const jumpStrength = -13.5;
+    let springBoost = false; // Track if the character has a spring boost
+
+    // Platforms Array
+    let platforms = [];
+
+    // Monster variables
+    let monsters = [];
+    let nextMonsterSpawnScore = 1000 + Math.random() * 500; // Between 1000 and 1500
+
+    // King variables
+    let kingSpawned = false;
+    let kingCollected = false;
+    let kingPlatform = null;
+    let kingSprite = null;
+
+    // Springs Array
+    let springs = [];
+
+    // Modal dialog variables
+    let modalContainer;
+    let modalText;
+    let modalButton;
+
+    // Declare 'score' before any functions use it
+    let score = 0;
+
+    // Text flash timer
+    let textFlashTimer = 0;
+    const TEXT_VISIBLE_DURATION = 30; // 0.5 seconds at 60fps
+    const TEXT_HIDDEN_DURATION = 15;  // 0.25 seconds at 60fps
+
+    // Get level parameters from selectedLevel
+    const levelLength = selectedLevel.levelLength || 3000; // Default to 3000 if not specified
+    const kingImageName = selectedLevel.kingImage || 'king.png'; // Default to 'king.png' if not specified
 
     // 1. Create the PixiJS Application inside the game container
     app = new PIXI.Application({
@@ -75,7 +274,7 @@ function initGame() {
         backgroundColor: 0xADD8E6, // Light blue color for the background
         antialias: true,
     });
-    document.getElementById('game-container').appendChild(app.view);
+    gameContainer.appendChild(app.view);
 
     // Create background container for clouds
     const backgroundContainer = new PIXI.Container();
@@ -95,9 +294,7 @@ function initGame() {
             cloud.anchor.set(0.5);
 
             // Adjust cloud size
-            // Set the cloud's width to 2.5 times the character's width (smaller clouds)
             cloud.width = 2.5 * characterWidth; // characterWidth is 55, so cloud.width is about 137.5 pixels
-            // Cut the height of clouds in half compared to original proportion
             cloud.height = (cloud.texture.height * (cloud.width / cloud.texture.width)) / 2;
 
             // Random position
@@ -129,6 +326,9 @@ function initGame() {
     // Load platform texture
     const platformTexture = PIXI.Texture.from('platform.png', textureSettings);
 
+    // Load spring texture
+    const springTexture = PIXI.Texture.from('spring.png', textureSettings);
+
     // Initialize character sprite with right-facing texture
     character = new PIXI.Sprite(characterTextures.right);
     character.width = characterWidth;
@@ -144,41 +344,6 @@ function initGame() {
     character.lastDirection = 'right';
 
     app.stage.addChild(character);
-
-    // Variables for Movement and Physics
-    let velocityY = 0;
-    const gravity = 0.5;
-    const jumpStrength = -13.5;
-
-    // Platforms Array
-    let platforms = [];
-
-    // Monster variables
-    let monsters = [];
-    let nextMonsterSpawnScore = 1000 + Math.random() * 500; // Between 1000 and 1500
-
-    // King variables
-    let kingSpawned = false;
-    let kingCollected = false;
-    let kingPlatform = null;
-    let kingSprite = null;
-
-    // Modal dialog variables
-    let modalContainer;
-    let modalText;
-    let modalButton;
-
-    // Declare 'score' before any functions use it
-    let score = 0;
-
-    // Text flash timer
-    let textFlashTimer = 0;
-    const TEXT_VISIBLE_DURATION = 30; // 0.5 seconds at 60fps
-    const TEXT_HIDDEN_DURATION = 15;  // 0.25 seconds at 60fps
-
-    // Get level parameters from selectedLevel
-    const levelLength = selectedLevel.levelLength || 3000; // Default to 3000 if not specified
-    const kingImageName = selectedLevel.kingImage || 'king.png'; // Default to 'king.png' if not specified
 
     // 5. Create the Floor
     function createFloor() {
@@ -221,6 +386,28 @@ function initGame() {
         platform.y = y;
         app.stage.addChild(platform);
         platforms.push(platform);
+
+        // Add spring to some platforms
+        if (score >= 500 && Math.random() < 0.05) { // Approximately 1 in 20 platforms
+            createSpring(platform);
+        }
+    }
+
+    // Function to create a spring on a platform
+    function createSpring(platform) {
+        const spring = new PIXI.Sprite(springTexture);
+        spring.anchor.set(0.5, 1); // Anchor at bottom center
+        spring.width = platform.width / 3; // Cover middle third of the platform
+        spring.height = spring.texture.height * (spring.width / spring.texture.width);
+
+        spring.x = platform.x + platform.width / 2;
+        spring.y = platform.y;
+
+        // Add reference to the platform
+        spring.platform = platform;
+
+        app.stage.addChild(spring);
+        springs.push(spring);
     }
 
     // Function to create the king platform and sprite
@@ -275,6 +462,11 @@ function initGame() {
 
     // Function to create a monster
     function createMonster(y) {
+        // Do not spawn monsters if the character has a spring boost
+        if (springBoost) {
+            return;
+        }
+
         const monsterTextureSettings = {
             scaleMode: PIXI.SCALE_MODES.LINEAR,
             mipmap: PIXI.MIPMAP_MODES.ON,
@@ -291,7 +483,6 @@ function initGame() {
         monster.height = character.height;
 
         // Position the monster at a random x position at the specified y
-        // Adjusted to ensure the monster is fully on-screen
         monster.x = monster.width / 2 + Math.random() * (app.screen.width - monster.width);
         monster.y = y;
 
@@ -353,7 +544,7 @@ function initGame() {
         modalContainer.addChild(modalButton);
 
         // Button text
-        const buttonText = new PIXI.Text('Main Menu', {
+        const buttonText = new PIXI.Text('Return to Map', {
             fontFamily: 'Arial',
             fontSize: 20,
             fill: '#FFFFFF'
@@ -374,18 +565,39 @@ function initGame() {
         app.stage.removeChild(modalContainer);
         modalContainer = null;
 
-        // Return to the main menu instead of resetting the game
-        returnToMainMenu();
+        // Return to the game map instead of the main menu
+        returnToGameMap();
     }
 
     // Function to show the victory modal dialog
     function showVictoryModal() {
-        showModal('Congratulations You Conquered This Country! Return to Main Menu:');
+        // Update user's conquered countries
+        if (currentUser && selectedLevel.countryName) {
+            const conqueredCountries = users[currentUser].conqueredCountries || [];
+            if (!conqueredCountries.includes(selectedLevel.countryName)) {
+                conqueredCountries.push(selectedLevel.countryName);
+                // Update Firebase
+                db.collection('Users').doc(currentUser).update({
+                    conqueredCountries: conqueredCountries
+                }).then(() => {
+                    // Update local data
+                    users[currentUser].conqueredCountries = conqueredCountries;
+                    // Update the countries conquered text
+                    updateCountriesConqueredText();
+                    // Update country labels
+                    updateCountryLabels();
+                }).catch((error) => {
+                    console.error("Error updating user's conquered countries: ", error);
+                });
+            }
+        }
+
+        showModal('Congratulations! You Conquered This Country! Return to Map:');
     }
 
     // Function to show the game over modal dialog
     function showGameOverModal() {
-        showModal('Game Over! Click to Return to Main Menu:');
+        showModal('Game Over! Click to Return to Map:');
     }
 
     // Initial Platform Generation
@@ -481,60 +693,96 @@ function initGame() {
             character.x = app.screen.width + character.width / 2;
         }
 
-        // Collision Detection with One-Way Platforms - Updated for feet-only detection
+        // Calculate characterFeetY
         const characterFeetY = character.y + character.height / 3; // Adjusted feet position
 
-        for (let platform of platforms) {
+        // Collision Detection with Springs
+        let onPlatform = false;
+
+        for (let i = springs.length - 1; i >= 0; i--) {
+            let spring = springs[i];
             if (
-                character.x + character.width / 3 > platform.x &&
-                character.x - character.width / 3 < platform.x + platform.width &&
-                characterFeetY > platform.y &&
-                characterFeetY - velocityY <= platform.y &&
+                character.x + character.width / 3 > spring.x - spring.width / 2 &&
+                character.x - character.width / 3 < spring.x + spring.width / 2 &&
+                characterFeetY > spring.y - spring.height &&
+                characterFeetY - velocityY <= spring.y - spring.height &&
                 velocityY > 0
             ) {
-                velocityY = jumpStrength;
+                velocityY = -25; // Spring jump strength adjusted to -25
+                springBoost = true; // Activate spring boost
+                onPlatform = true;
                 break;
             }
         }
 
+        // Collision Detection with One-Way Platforms
+        if (!onPlatform) {
+            for (let platform of platforms) {
+                if (
+                    character.x + character.width / 3 > platform.x &&
+                    character.x - character.width / 3 < platform.x + platform.width &&
+                    characterFeetY > platform.y &&
+                    characterFeetY - velocityY <= platform.y &&
+                    velocityY > 0
+                ) {
+                    velocityY = jumpStrength;
+                    onPlatform = true;
+
+                    // Reset springBoost when landing on a platform
+                    if (springBoost) {
+                        springBoost = false;
+                    }
+
+                    break;
+                }
+            }
+        } else {
+            // Reset springBoost if the character is on a platform after spring jump
+            if (springBoost) {
+                springBoost = false;
+            }
+        }
+
         // Move and update monsters
-        for (let i = monsters.length - 1; i >= 0; i--) {
-            let monster = monsters[i];
-            // Move monster
-            monster.x += monster.vx * monster.direction;
+        if (!springBoost) {
+            for (let i = monsters.length - 1; i >= 0; i--) {
+                let monster = monsters[i];
+                // Move monster
+                monster.x += monster.vx * monster.direction;
 
-            // Reverse direction if monster hits the edge of the screen
-            if (monster.x <= monster.width / 2) {
-                monster.x = monster.width / 2;
-                monster.direction *= -1;
-            } else if (monster.x >= app.screen.width - monster.width / 2) {
-                monster.x = app.screen.width - monster.width / 2;
-                monster.direction *= -1;
-            }
+                // Reverse direction if monster hits the edge of the screen
+                if (monster.x <= monster.width / 2) {
+                    monster.x = monster.width / 2;
+                    monster.direction *= -1;
+                } else if (monster.x >= app.screen.width - monster.width / 2) {
+                    monster.x = app.screen.width - monster.width / 2;
+                    monster.direction *= -1;
+                }
 
-            // Move monster down with the platforms when the screen scrolls
-            if (character.y < app.screen.height / 2) {
-                monster.y += app.screen.height / 2 - character.y;
-            }
+                // Move monster down with the platforms when the screen scrolls
+                if (character.y < app.screen.height / 2) {
+                    monster.y += app.screen.height / 2 - character.y;
+                }
 
-            // Remove monster if it goes off-screen at the bottom
-            if (monster.y > app.screen.height) {
-                app.stage.removeChild(monster);
-                monsters.splice(i, 1);
-                continue; // Skip collision detection if monster is removed
-            }
+                // Remove monster if it goes off-screen at the bottom
+                if (monster.y > app.screen.height) {
+                    app.stage.removeChild(monster);
+                    monsters.splice(i, 1);
+                    continue; // Skip collision detection if monster is removed
+                }
 
-            // Collision detection between character and monster
-            let monsterBounds = monster.getBounds();
-            let characterBounds = character.getBounds();
+                // Collision detection between character and monster
+                let monsterBounds = monster.getBounds();
+                let characterBounds = character.getBounds();
 
-            if (monsterBounds.x + monsterBounds.width > characterBounds.x &&
-                monsterBounds.x < characterBounds.x + characterBounds.width &&
-                monsterBounds.y + monsterBounds.height > characterBounds.y &&
-                monsterBounds.y < characterBounds.y + characterBounds.height) {
-                // Collision detected
-                showGameOverModal();
-                return; // Exit the game loop
+                if (monsterBounds.x + monsterBounds.width > characterBounds.x &&
+                    monsterBounds.x < characterBounds.x + characterBounds.width &&
+                    monsterBounds.y + monsterBounds.height > characterBounds.y &&
+                    monsterBounds.y < characterBounds.y + characterBounds.height) {
+                    // Collision detected
+                    showGameOverModal();
+                    return; // Exit the game loop
+                }
             }
         }
 
@@ -579,6 +827,17 @@ function initGame() {
                 }
             }
 
+            // Move springs down
+            for (let i = springs.length - 1; i >= 0; i--) {
+                let spring = springs[i];
+                spring.y += offset;
+
+                if (spring.y > app.screen.height) {
+                    app.stage.removeChild(spring);
+                    springs.splice(i, 1);
+                }
+            }
+
             // Move king sprite down if it exists
             if (kingSprite) {
                 kingSprite.y += offset;
@@ -605,7 +864,7 @@ function initGame() {
             }
 
             // Generate monsters
-            if (!kingSpawned && score >= 1000 && score >= nextMonsterSpawnScore) {
+            if (!kingSpawned && score >= 1000 && score >= nextMonsterSpawnScore && !springBoost) {
                 // Generate a monster above the highest platform
                 let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : 0;
                 createMonster(highestPlatformY - 200); // Place monster above the highest platform
@@ -633,8 +892,8 @@ function initGame() {
         }
     });
 
-    // Function to return to the main menu
-    function returnToMainMenu() {
+    // Function to return to the game map
+    function returnToGameMap() {
         // Remove event listeners
         window.removeEventListener('keydown', onKeyDown);
         window.removeEventListener('keyup', onKeyUp);
@@ -642,11 +901,11 @@ function initGame() {
         // Destroy the game application and free resources
         app.destroy(true, { children: true, texture: true, baseTexture: true });
         app = null; // Reset the app variable
-        document.getElementById('game-container').innerHTML = '';
+        gameContainer.innerHTML = '';
         // Hide the game container
-        document.getElementById('game-container').style.display = 'none';
-        // Show the main menu
-        document.getElementById('main-menu').style.display = 'block';
+        gameContainer.style.display = 'none';
+        // Show the game map
+        gameMap.style.display = 'block';
         gameStarted = false; // Reset the gameStarted variable
         selectedLevel = null; // Reset the selected level
     }

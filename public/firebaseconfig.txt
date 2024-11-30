@@ -1,0 +1,7 @@
+apiKey: "AIzaSyAkDDf0Ry4pbAbaZkZPZ6eiKOCf0ELG6Ag",
+authDomain: "worlddominationgameroen.firebaseapp.com",
+projectId: "worlddominationgameroen",
+storageBucket: "worlddominationgameroen.firebasestorage.app",
+messagingSenderId: "738029716231",
+appId: "1:738029716231:web:d7051b55db16bf3dda7ba2",
+measurementId: "G-BR7WE3YE0Q"
