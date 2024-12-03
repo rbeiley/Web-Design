@@ -250,6 +250,9 @@ function initGame() {
     // Springs Array
     let springs = [];
 
+    // Broken Platforms Array
+    // (We can use the same platforms array and identify broken platforms with a flag)
+
     // Modal dialog variables
     let modalContainer;
     let modalText;
@@ -329,6 +332,9 @@ function initGame() {
     // Load spring texture
     const springTexture = PIXI.Texture.from('spring.png', textureSettings);
 
+    // Load broken platform texture
+    const brokenPlatformTexture = PIXI.Texture.from('brokenplatform.png', textureSettings);
+
     // Initialize character sprite with right-facing texture
     character = new PIXI.Sprite(characterTextures.right);
     character.width = characterWidth;
@@ -367,7 +373,15 @@ function initGame() {
 
     // 6. Generate Random Platforms
     function createPlatform(y) {
-        const platform = new PIXI.Sprite(platformTexture);
+        // Adjust the probability of spawning a broken platform based on the score
+        const maxBrokenProbability = 0.25;  // Maximum probability (1 in 4)
+const minBrokenProbability = 0.125; // Starting probability (1 in 8)
+        const maxScoreForBrokenPlatforms = 2000; // Score at which probability reaches maximum
+        const currentScoreForBrokenPlatforms = Math.min(score, maxScoreForBrokenPlatforms);
+        const brokenPlatformProbability = minBrokenProbability +
+            ((currentScoreForBrokenPlatforms / maxScoreForBrokenPlatforms) * (maxBrokenProbability - minBrokenProbability));
+
+        // Adjust platform width based on score (difficulty)
         const baseWidth = 60;
         const minWidth = 30; // minimum platform width
         const maxScoreForDifficulty = 2000; // score at which platforms reach minimum width
@@ -379,18 +393,46 @@ function initGame() {
         let platformWidth = baseWidth - widthReduction - randomAdjustment;
         platformWidth = Math.max(platformWidth, minWidth); // ensure width is at least minWidth
 
-        platform.width = platformWidth;
-        platform.height = 15;
-        // Adjust x so that platform stays within the screen
-        platform.x = Math.random() * (app.screen.width - platform.width);
-        platform.y = y;
-        app.stage.addChild(platform);
-        platforms.push(platform);
+        // Decide whether to create a broken platform
+        if (Math.random() < brokenPlatformProbability) {
+            createBrokenPlatform(y, platformWidth);
+        } else {
+            // Create a normal platform
+            const platform = new PIXI.Sprite(platformTexture);
+            platform.width = platformWidth;
+            platform.height = 15;
+            // Adjust x so that platform stays within the screen
+            platform.x = Math.random() * (app.screen.width - platform.width);
+            platform.y = y;
+            platform.isBroken = false; // Normal platform
+            platform.isBrokenActivated = false; // For consistency
+            platform.falling = false; // For consistency
+            platform.vx = 0; // For consistency
+            platform.direction = 0;
 
-        // Add spring to some platforms
-        if (score >= 500 && Math.random() < 0.05) { // Approximately 1 in 20 platforms
-            createSpring(platform);
+            app.stage.addChild(platform);
+            platforms.push(platform);
+
+            // Add spring to some platforms
+            if (score >= 500 && Math.random() < 0.0667) { // Approximately 1 in 15 platforms
+                createSpring(platform);
+            }
         }
+    }
+
+    // Function to create a broken platform
+    function createBrokenPlatform(y, platformWidth) {
+        const brokenPlatform = new PIXI.Sprite(brokenPlatformTexture);
+        brokenPlatform.width = platformWidth;
+        brokenPlatform.height = 15;
+        brokenPlatform.x = Math.random() * (app.screen.width - brokenPlatform.width);
+        brokenPlatform.y = y;
+        brokenPlatform.isBroken = true; // Flag to identify broken platforms
+        brokenPlatform.isBrokenActivated = false; // Flag to check if it has been stepped on
+        brokenPlatform.falling = false;
+
+        app.stage.addChild(brokenPlatform);
+        platforms.push(brokenPlatform);
     }
 
     // Function to create a spring on a platform
@@ -601,10 +643,13 @@ function initGame() {
     }
 
     // Initial Platform Generation
-    for (let i = 0; i < 10; i++) {
-        let y = app.screen.height - 100 - i * 100;
-        createPlatform(y);
-    }
+let initialPlatformY = app.screen.height - 100;
+for (let i = 0; i < 15; i++) { // Increased from 10 to 15 platforms
+    let gap = 70 + Math.random() * 50; // Random gap between 70 and 120 pixels
+    initialPlatformY -= gap;
+    createPlatform(initialPlatformY);
+}
+
 
     // 7. Keyboard Input for Left and Right Movement
     const keys = {};
@@ -708,7 +753,7 @@ function initGame() {
                 characterFeetY - velocityY <= spring.y - spring.height &&
                 velocityY > 0
             ) {
-                velocityY = -25; // Spring jump strength adjusted to -25
+                velocityY = -28; // Spring jump strength adjusted to -25
                 springBoost = true; // Activate spring boost
                 onPlatform = true;
                 break;
@@ -717,7 +762,8 @@ function initGame() {
 
         // Collision Detection with One-Way Platforms
         if (!onPlatform) {
-            for (let platform of platforms) {
+            for (let i = platforms.length - 1; i >= 0; i--) {
+                let platform = platforms[i];
                 if (
                     character.x + character.width / 3 > platform.x &&
                     character.x - character.width / 3 < platform.x + platform.width &&
@@ -725,8 +771,22 @@ function initGame() {
                     characterFeetY - velocityY <= platform.y &&
                     velocityY > 0
                 ) {
-                    velocityY = jumpStrength;
-                    onPlatform = true;
+                    if (platform.isBroken) {
+                        if (!platform.isBrokenActivated) {
+                            // First time landing on it
+                            velocityY = jumpStrength;
+                            onPlatform = true;
+
+                            platform.isBrokenActivated = true; // Mark as activated
+
+                            // Start the falling animation
+                            initiateBrokenPlatformFall(platform, i);
+                        }
+                    } else {
+                        // Normal platform behavior
+                        velocityY = jumpStrength;
+                        onPlatform = true;
+                    }
 
                     // Reset springBoost when landing on a platform
                     if (springBoost) {
@@ -740,6 +800,20 @@ function initGame() {
             // Reset springBoost if the character is on a platform after spring jump
             if (springBoost) {
                 springBoost = false;
+            }
+        }
+
+        // Update broken platforms that are falling
+        for (let i = platforms.length - 1; i >= 0; i--) {
+            let platform = platforms[i];
+            if (platform.isBroken && platform.falling) {
+                platform.y += 10; // Adjust the speed of falling as desired
+
+                if (platform.y > app.screen.height) {
+                    // Remove the platform once it's off-screen
+                    app.stage.removeChild(platform);
+                    platforms.splice(i, 1);
+                }
             }
         }
 
@@ -874,16 +948,17 @@ function initGame() {
             }
 
             // Generate new platforms only if king not spawned
-            if (!kingSpawned) {
-                // Generate new platforms
-                let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : app.screen.height - 100;
+if (!kingSpawned) {
+    // Generate new platforms
+    let highestPlatformY = platforms.length > 0 ? Math.min(...platforms.map(p => p.y)) : app.screen.height - 100;
 
-                while (highestPlatformY > 0) {
-                    let y = highestPlatformY - 100;
-                    createPlatform(y);
-                    highestPlatformY = y;
-                }
-            }
+    while (highestPlatformY > -100) { // Generate platforms above the visible screen
+        let gap = 70 + Math.random() * 50; // Random gap between 70 and 120 pixels
+        let y = highestPlatformY - gap;
+        createPlatform(y);
+        highestPlatformY = y;
+    }
+}
         }
 
         // Game Over Condition
@@ -891,6 +966,20 @@ function initGame() {
             showGameOverModal();
         }
     });
+
+    // Function to initiate the falling of a broken platform
+    function initiateBrokenPlatformFall(platform, index) {
+        // Start the falling animation
+        platform.falling = true;
+
+        // Remove any springs on this platform
+        for (let i = springs.length - 1; i >= 0; i--) {
+            if (springs[i].platform === platform) {
+                app.stage.removeChild(springs[i]);
+                springs.splice(i, 1);
+            }
+        }
+    }
 
     // Function to return to the game map
     function returnToGameMap() {
