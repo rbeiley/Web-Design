@@ -2,26 +2,172 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Doodle Jump Clone</title>
+    <title>Dominate The World!</title>
     <!-- Include PixiJS via CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <!-- Include Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-firestore-compat.js"></script>
     <style>
+        /* Your existing CSS styles */
         body {
             margin: 0;
             padding: 0;
-            background-color: #FFFFFF; /* Changed to white */
+            background-color: #8FBC8F; /* Earthy green color */
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            position: relative;
+            font-family: 'Arial', sans-serif;
         }
+        /* Main Menu Styles */
+        #main-menu {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /* Animated Gradient Background */
+            background: linear-gradient(45deg, #8FBC8F, #A0522D);
+            background-size: 400% 400%;
+            animation: gradientAnimation 7s ease infinite; /* Adjusted animation duration */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+        /* Game Background Styles */
+        #game-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /* Apply the same animated background */
+            background: linear-gradient(45deg, #8FBC8F, #A0522D);
+            background-size: 400% 400%;
+            animation: gradientAnimation 7s ease infinite; /* Same animation as main menu */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 2; /* Above main menu */
+        }
+        /* Keyframes for background animation */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        #main-menu h1 {
+            color: #FFFFFF; /* White color for contrast */
+            margin: 20px;
+            text-shadow: 2px 2px 4px #000000; /* Add shadow for better readability */
+            text-align: center;
+            font-size: 48px;
+            position: relative;
+            z-index: 2;
+        }
+        #main-menu #username-container {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        #username-select, #new-username-input, #confirm-button {
+            font-size: 16px;
+            padding: 5px;
+            margin: 5px;
+        }
+        /* Doodle Character Images */
+        #left-character, #right-character {
+            position: absolute;
+            width: 100px; /* Adjust as needed */
+            height: auto;
+            top: 50%; /* Adjusted to 50% */
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+        #left-character {
+            left: calc(47% - 200px); /* Original position */
+        }
+        #right-character {
+            right: calc(47% - 200px); /* Original position */
+        }
+        /* Game Map Styles */
+        #game-map {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('worldmap.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: none; /* Hidden by default */
+            z-index: 1;
+        }
+        #countries-conquered-text {
+            position: absolute;
+            bottom: 20px; /* Adjust as needed */
+            width: 100%;
+            text-align: center;
+            color: #2E8B57; /* Darker green */
+            margin: 0;
+            font-size: 24px; /* Slightly smaller than the main title */
+            text-shadow: 2px 2px 4px #FFFFFF; /* Add shadow for better readability */
+        }
+        #country-labels {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .country-label {
+            position: absolute;
+            color: #2E8B57;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #FFFFFF;
+            cursor: pointer;
+            transform: translate(-50%, -50%); /* Center the label at the position */
+        }
+        /* Canvas styling */
         canvas {
-            border: 1px solid black;
+            border: 2px solid #2E8B57;
         }
     </style>
 </head>
 <body>
-    <script src="game.js"></script>
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <!-- Doodle Characters -->
+        <img id="left-character" src="doodle_right.png" alt="Left Character">
+        <img id="right-character" src="doodle_left.png" alt="Right Character">
+        <h1>Dominate The World!</h1>
+        <!-- Username Selector -->
+        <div id="username-container">
+            <select id="username-select">
+                <!-- Usernames will be dynamically added here -->
+            </select>
+            <input type="text" id="new-username-input" placeholder="Enter username">
+        </div>
+        <button id="confirm-button">Confirm</button>
+    </div>
+    <!-- Game Map -->
+    <div id="game-map">
+        <div id="country-labels">
+            <!-- Country labels will be dynamically added here -->
+        </div>
+        <h2 id="countries-conquered-text">Countries Conquered: 0</h2>
+    </div>
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- The game canvas will be appended here by PixiJS -->
+    </div>
+
+    <!-- Include the JavaScript files in order -->
+    <script src="Country.js"></script>
+    <script src="Player.js"></script>
+    <script src="Game.js"></script>
+    <script src="GameManager.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
