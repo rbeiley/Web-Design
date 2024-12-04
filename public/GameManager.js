@@ -152,6 +152,9 @@ class GameManager {
     }
 
     proceedToGameMap() {
+        if (this.player.conqueredCountries.length === 0) {
+            alert('Choose your starting country.');
+        }        
         // Hide the main menu
         this.mainMenu.style.display = 'none';
         // Show the game map
@@ -159,6 +162,8 @@ class GameManager {
         // Update the map and conquered countries text
         this.updateMap();
         this.updateCountriesConqueredText();
+        this.player.updateConquerableCountries(this.countries);
+
     }
 
     updateCountriesConqueredText() {
@@ -184,10 +189,17 @@ class GameManager {
     }
 
     selectCountry(country) {
-        // Handle player interactions with the map, triggering the game
-        // Initialize the game
-        this.game = new Game(this, country);
+        if (!this.player.conqueredCountries.length) {
+            // Starting country: Allow any country
+            this.player.addCountry(country);
+            this.updateMap();
+        } else if (this.player.conquerableCountries.includes(country.name)) {
+            this.game = new Game(this, country);
+        } else {
+            alert('You can only conquer neighboring countries.');
+        }
     }
+    
 
     onGameEnd(isWon, country) {
         // Handle the end of the game
@@ -201,6 +213,7 @@ class GameManager {
         this.gameMap.style.display = 'block';
         // Update the map
         this.updateMap();
+        this.player.updateConquerableCountries(this.countries);
         this.updateCountriesConqueredText();
     }
 }

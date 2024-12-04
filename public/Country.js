@@ -2,6 +2,7 @@
 
 class Country {
     constructor(data, gameManager) {
+        this.neighbors = data.neighbors || []; // Array of neighboring country names
         this.gameManager = gameManager;
         this.name = data.Country;
         this.levelLength = data['Level Length'];
@@ -26,14 +27,14 @@ class Country {
         // Set up the click event
         this.label.onclick = (event) => {
             event.preventDefault();
-            if (this.isConquered) {
-                alert('You have already conquered this country.');
-            } else if (this.isConquerable) {
+            if (this.gameManager.player.conqueredCountries.length === 0) {
+                this.gameManager.selectCountry(this); // Allow starting country selection
+            } else if (this.gameManager.player.conquerableCountries.includes(this.name)) {
                 this.gameManager.selectCountry(this);
             } else {
-                alert('This country is not conquerable yet.');
+                alert('You cannot conquer this country yet.');
             }
-        };
+        };        
 
         container.appendChild(this.label);
         this.updateLabel();
