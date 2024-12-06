@@ -22,5 +22,24 @@ class Player {
         }
     }
 
+    updateConquerableCountries(allCountries) {
+        this.conquerableCountries = [];
+    
+        this.conqueredCountries.forEach((conqueredCountryName) => {
+            const conqueredCountry = allCountries[conqueredCountryName];
+            if (conqueredCountry) {
+                conqueredCountry.neighbors.forEach((neighborName) => {
+                    if (
+                        !this.conqueredCountries.includes(neighborName) && // Not already conquered
+                        !this.conquerableCountries.includes(neighborName) // Avoid duplicates
+                    ) {
+                        this.conquerableCountries.push(neighborName);
+                    }
+                });
+            }
+        });
+    }
+    
+
     // Additional methods to manage conquerable countries can be added
 }
