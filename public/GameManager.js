@@ -212,14 +212,14 @@ class GameManager {
     selectCountry(country) {
         if (!this.player.conqueredCountries.length) {
             // Starting country: Allow any country
-            this.player.addCountry(country);
-            this.updateMap();
+            this.game = new Game(this, country); // Initialize the game
         } else if (this.player.conquerableCountries.includes(country.name)) {
-            this.game = new Game(this, country);
+            this.game = new Game(this, country); // Initialize the game for conquerable countries
         } else {
             alert('You can only conquer neighboring countries.');
         }
     }
+    
     
 
     onGameEnd(isWon, country) {
