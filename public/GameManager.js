@@ -12,20 +12,55 @@ class GameManager {
         this.countries = {}; // Store Country instances
         this.game = null; // Current game instance
 
-        // DOM elements
-        this.mainMenu = document.getElementById('main-menu');
+        // Check if we're on the world map page
+        if (window.location.pathname.includes('worldmap.html')) {
+            this.initializeWorldMapPage();
+        } else {
+            // Username selection page
+            this.mainMenu = document.getElementById('main-menu');
+            this.usernameSelect = document.getElementById('username-select');
+            this.newUsernameInput = document.getElementById('new-username-input');
+            this.confirmButton = document.getElementById('confirm-button');
+
+            this.populateUsernames();
+            this.addEventListeners();
+        }
+    }
+
+    initializeWorldMapPage() {
+        // DOM elements specific to world map page
         this.gameMap = document.getElementById('game-map');
         this.gameContainer = document.getElementById('game-container');
-        this.usernameSelect = document.getElementById('username-select');
-        this.newUsernameInput = document.getElementById('new-username-input');
-        this.confirmButton = document.getElementById('confirm-button');
         this.countriesConqueredText = document.getElementById('countries-conquered-text');
         this.countryLabelsContainer = document.getElementById('country-labels');
 
-        // Initialize the game manager
-        this.populateUsernames();
-        this.addEventListeners();
-        this.initializeMap();
+        // Retrieve username from local storage
+        const storedUsername = localStorage.getItem('username');
+        
+        if (!storedUsername) {
+            // Redirect back to username selection if no username is stored
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // Load user data and initialize the map
+        this.currentUser = storedUsername;
+        this.loadUserData(this.currentUser).then(() => {
+            // Initialize player
+            this.player = new Player(this.currentUser, this.users[this.currentUser]);
+            
+            // Initialize map
+            this.initializeMap();
+            this.addWorldMapEventListeners();
+        }).catch((error) => {
+            console.error("Error loading user data: ", error);
+            window.location.href = 'index.html';
+        });
+    }
+
+    addWorldMapEventListeners() {
+        // Add any necessary event listeners for the world map page
+        // This could include country selection, etc.
     }
 
     initializeMap() {
@@ -38,6 +73,7 @@ class GameManager {
             });
             // Once countries are loaded, create labels
             this.renderMap();
+            this.proceedToGameMap();
         }).catch((error) => {
             console.error("Error fetching levels: ", error);
         });
@@ -109,12 +145,9 @@ class GameManager {
                         }).then(() => {
                             // Add new user to the users object
                             this.users[newUsername] = { conqueredCountries: [] };
-                            // Set current user
-                            this.currentUser = newUsername;
-                            // Initialize player
-                            this.player = new Player(newUsername, this.users[newUsername]);
-                            // Proceed to game map screen
-                            this.proceedToGameMap();
+                            // Store username and redirect
+                            localStorage.setItem('username', newUsername);
+                            window.location.href = 'worldmap.html';
                         }).catch((error) => {
                             console.error("Error creating user: ", error);
                         });
@@ -124,16 +157,9 @@ class GameManager {
                 }
             } else {
                 // Existing user selected
-                this.currentUser = selectedValue;
-                // Load user data
-                this.loadUserData(this.currentUser).then(() => {
-                    // Initialize player
-                    this.player = new Player(this.currentUser, this.users[this.currentUser]);
-                    // Proceed to game map screen
-                    this.proceedToGameMap();
-                }).catch((error) => {
-                    console.error("Error loading user data: ", error);
-                });
+                // Store username and redirect
+                localStorage.setItem('username', selectedValue);
+                window.location.href = 'worldmap.html';
             }
         });
     }
@@ -155,15 +181,10 @@ class GameManager {
         if (this.player.conqueredCountries.length === 0) {
             alert('Choose your starting country.');
         }        
-        // Hide the main menu
-        this.mainMenu.style.display = 'none';
-        // Show the game map
-        this.gameMap.style.display = 'block';
         // Update the map and conquered countries text
         this.updateMap();
         this.updateCountriesConqueredText();
         this.player.updateConquerableCountries(this.countries);
-
     }
 
     updateCountriesConqueredText() {

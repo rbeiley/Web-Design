@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dominate The World! - World Map</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Include PixiJS via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <!-- Include Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- Game Map -->
+    <div id="game-map">
+        <div id="country-labels">
+            <!-- Country labels will be dynamically added here -->
+        </div>
+        <h2 id="countries-conquered-text">Countries Conquered: 0</h2>
+    </div>
+    
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- The game canvas will be appended here by PixiJS -->
+    </div>
+
+    <!-- Include the JavaScript files in order -->
+    <script src="Country.js"></script>
+    <script src="Player.js"></script>
+    <script src="Game.js"></script>
+    <script src="GameManager.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
