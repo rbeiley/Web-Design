@@ -96,7 +96,7 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    background-image: url('worldmap.png');
+    background-image: url('pictures/worldmap.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
