@@ -55,7 +55,7 @@ class Game {
 
         // Get level parameters from selectedCountry
         this.levelLength = this.selectedCountry.levelLength || 3000; // Default to 3000 if not specified
-        this.kingImageName = this.selectedCountry.kingImage || 'king.png'; // Default to 'king.png' if not specified
+        this.kingImageName = this.selectedCountry.kingImage || 'pictures/king.png'; // Default to 'king.png' if not specified
 
         // 1. Create the PixiJS Application inside the game container
         this.app = new PIXI.Application({
@@ -96,7 +96,7 @@ class Game {
         const numClouds = 2; // Adjusted to have 1-2 clouds on screen
         for (let i = 0; i < numClouds; i++) {
             // Load cloud texture
-            const cloudTexture = PIXI.Texture.from('cloud.png'); // Ensure 'cloud.png' exists in your directory
+            const cloudTexture = PIXI.Texture.from('pictures/cloud.png'); // Ensure 'cloud.png' exists in your directory
             const cloud = new PIXI.Sprite(cloudTexture);
             cloud.anchor.set(0.5);
 
@@ -126,18 +126,18 @@ class Game {
         };
 
         this.characterTextures = {
-            right: PIXI.Texture.from('doodle_right.png', textureSettings),
-            left: PIXI.Texture.from('doodle_left.png', textureSettings)
+            right: PIXI.Texture.from('pictures/doodle_right.png', textureSettings),
+            left: PIXI.Texture.from('pictures/doodle_left.png', textureSettings)
         };
 
         // Load platform texture
-        this.platformTexture = PIXI.Texture.from('platform.png', textureSettings);
+        this.platformTexture = PIXI.Texture.from('pictures/platform.png', textureSettings);
 
         // Load spring texture
-        this.springTexture = PIXI.Texture.from('spring.png', textureSettings);
+        this.springTexture = PIXI.Texture.from('pictures/spring.png', textureSettings);
 
         // Load broken platform texture
-        this.brokenPlatformTexture = PIXI.Texture.from('brokenplatform.png', textureSettings);
+        this.brokenPlatformTexture = PIXI.Texture.from('pictures/brokenplatform.png', textureSettings);
 
         // Initialize character sprite with right-facing texture
         this.character = new PIXI.Sprite(this.characterTextures.right);
@@ -321,7 +321,7 @@ class Game {
             anisotropicLevel: 16,
             quality: 1
         };
-        const monsterTexture = PIXI.Texture.from('monster.png', monsterTextureSettings);
+        const monsterTexture = PIXI.Texture.from('pictures/monster.png', monsterTextureSettings);
 
         const monster = new PIXI.Sprite(monsterTexture);
         monster.anchor.set(0.5, 0.5);
