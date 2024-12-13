@@ -9,3 +9,4 @@ Need to do:
 
 1. (do first, maybe 1 class periods) I need to make the game so that you choose an original country to start with and then go and conquer each country touching it. Right now, you just log into the game and can conquer any country you click on, but I want people to choose a country to start with, and then only be able to conquer Countries that are touching a country they have conquered
 2. (do second, should take a little bit longer, maybe 2-3 class periods) Also, maybe change the map from a basic 2d image of the world to a 3d globe which you can spin and click on etc.
+3. Encorporate the globe so that you can click on the countries directly and operate it
