@@ -134,7 +134,7 @@ class Game {
         this.platformTexture = PIXI.Texture.from('pictures/platform.png', textureSettings);
 
         // Load spring texture
-        this.springTexture = PIXI.Texture.from('pictures/spring.png', textureSettings);
+        this.springTexture = PIXI.Texture.from('spring.png', textureSettings);
 
         // Load broken platform texture
         this.brokenPlatformTexture = PIXI.Texture.from('pictures/brokenplatform.png', textureSettings);
@@ -174,13 +174,18 @@ class Game {
     }
 
     createInitialPlatforms() {
-        let initialPlatformY = this.app.screen.height - 100;
-        for (let i = 0; i < 15; i++) { // Increased from 10 to 15 platforms
-            let gap = 70 + Math.random() * 50; // Random gap between 70 and 120 pixels
-            initialPlatformY -= gap;
-            this.createPlatform(initialPlatformY);
-        }
+    // Position the first platform closer to the floor so it's always reachable
+    let initialPlatformY = this.app.screen.height - 60; // Was previously this.app.screen.height - 100
+    this.createPlatform(initialPlatformY);
+
+    // Now create the remaining platforms above it
+    for (let i = 1; i < 15; i++) {
+        let gap = 70 + Math.random() * 50; // Random gap between 70 and 120 pixels
+        initialPlatformY -= gap;
+        this.createPlatform(initialPlatformY);
     }
+}
+
 
     createPlatform(y) {
         // Adjust the probability of spawning a broken platform based on the score
